@@ -7,7 +7,7 @@
       "Action": [
         "s3:ListBucket"
       ],
-      "Resource": "arn:aws:s3:::BUCKET_FRONTEND"
+      "Resource": "arn:aws:s3:::residencia-foundation-catch-up-spri-frontendbucket-u8bk8viuoeuu"
     },
     {
       "Sid": "PublishFrontendObjects",
@@ -24,7 +24,7 @@
         "cloudfront:CreateInvalidation",
         "cloudfront:GetInvalidation"
       ],
-      "Resource": "arn:aws:cloudfront::ACCOUNT_ID:distribution/DISTRIBUTION_ID"
+      "Resource": "arn:aws:cloudfront::113011715524:distribution/E3ES8QAL9HWFR4"
     }
   ]
 }

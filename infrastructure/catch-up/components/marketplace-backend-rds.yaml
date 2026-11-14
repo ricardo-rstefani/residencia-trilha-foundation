@@ -334,7 +334,7 @@ Resources:
       DBSubnetGroupName: !Ref DatabaseSubnets
       VPCSecurityGroups: [!Ref DatabaseSG]
       PubliclyAccessible: false
-      BackupRetentionPeriod: 7
+      BackupRetentionPeriod: 1
       MultiAZ: false
   ProxyRole:
     Type: AWS::IAM::Role

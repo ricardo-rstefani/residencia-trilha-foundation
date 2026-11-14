@@ -4,9 +4,9 @@
     "Effect": "Allow",
     "Action": ["lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:UpdateFunctionCode"],
     "Resource": [
-      "arn:aws:lambda:REGION:ACCOUNT_ID:function:CATALOG_FUNCTION",
-      "arn:aws:lambda:REGION:ACCOUNT_ID:function:ORDER_API_FUNCTION",
-      "arn:aws:lambda:REGION:ACCOUNT_ID:function:ORDER_PROCESSOR_FUNCTION"
+      "arn:aws:lambda:us-east-1:113011715524:function:residencia-fdn-catalog-api",
+      "arn:aws:lambda:us-east-1:113011715524:function:residencia-fdn-order-api",
+      "arn:aws:lambda:us-east-1:113011715524:function:residencia-fdn-order-processor"
     ]
   }]
 }

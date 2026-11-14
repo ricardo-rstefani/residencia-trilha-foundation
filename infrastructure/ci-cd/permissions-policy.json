@@ -15,7 +15,7 @@
       "Action": [
         "s3:PutObject"
       ],
-      "Resource": "arn:aws:s3:::BUCKET_FRONTEND/*"
+      "Resource": "arn:aws:s3:::residencia-foundation-catch-up-spri-frontendbucket-u8bk8viuoeuu/*"
     },
     {
       "Sid": "InvalidateFrontendDistribution",

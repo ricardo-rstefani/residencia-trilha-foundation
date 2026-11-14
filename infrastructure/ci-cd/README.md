@@ -69,6 +69,9 @@ Defaults do catch-up: `residencia-fdn-catalog-api`, `residencia-fdn-order-api`,
 
 O build empacota três ZIPs, valida TypeScript e roda testes
 reais contra PostgreSQL local. Não usa a AWS para esses testes.
+O runner do build fica fixado em `ubuntu-24.04`, que fornece `postgresql-16`
+nos repositórios do sistema. Evite `ubuntu-latest` nesse job: a mudança da
+distribuição pode remover a versão exigida pelo teste e pelo `POSTGRES_BIN`.
 O manifesto registra o commit e SHA-256 de cada ZIP; o artefato fica guardado
 por 30 dias. O job de deploy não recompila código nem executa migrações.
 

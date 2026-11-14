@@ -16,7 +16,8 @@ concurrency:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04 fornece PostgreSQL 16 nos repositórios usados pelos testes.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:

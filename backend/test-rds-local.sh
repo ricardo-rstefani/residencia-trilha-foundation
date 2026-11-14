@@ -25,9 +25,17 @@ cleanup() {
 trap cleanup EXIT
 
 "${postgres_bin}/initdb" -D "$data_dir" --auth=trust --no-locale >/dev/null
-"${postgres_bin}/pg_ctl" -D "$data_dir" \
-  -o "-h 127.0.0.1 -p 55432 -k ${socket_dir}" \
-  -l "${test_root}/postgres.log" start >/dev/null
+server_options="-h 127.0.0.1 -p 55432"
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) ;;
+  *) server_options+=" -k \"${socket_dir}\"" ;;
+esac
+if ! "${postgres_bin}/pg_ctl" -D "$data_dir" \
+  -o "$server_options" \
+  -l "${test_root}/postgres.log" start >/dev/null; then
+  cat "${test_root}/postgres.log" >&2
+  exit 1
+fi
 "${postgres_bin}/createdb" -h 127.0.0.1 -p 55432 marketplace
 "${postgres_bin}/psql" -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 55432 -d marketplace \
   -f "${backend_dir}/sql/001_marketplace.sql" >/dev/null

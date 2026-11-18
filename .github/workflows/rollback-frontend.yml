@@ -1,0 +1,104 @@
+name: Rollback do frontend
+run-name: Restaurar frontend da release ${{ inputs.release_tag }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag da GitHub Release que contém o frontend.zip original
+        required: true
+        type: string
+      commit_sha:
+        description: SHA completo do commit restaurado
+        required: true
+        type: string
+      artifact_sha256:
+        description: SHA-256 do ZIP registrado quando ele foi preservado
+        required: true
+        type: string
+
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Restaurar frontend em produção
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      COMMIT_SHA: ${{ inputs.commit_sha }}
+      ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
+      FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
+      DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+      FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+
+    steps:
+      - name: Baixar e verificar o artefato original
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ -z "$RELEASE_TAG" || ! "$COMMIT_SHA" =~ ^[[:xdigit:]]{40}$ || ! "$ARTIFACT_SHA256" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::Informe a tag, o SHA completo do commit e o SHA-256 do ZIP."
+            exit 1
+          fi
+
+          gh release download --repo "$GITHUB_REPOSITORY" \
+            --pattern frontend.zip --output frontend.zip -- "$RELEASE_TAG"
+          printf '%s  frontend.zip\n' "${ARTIFACT_SHA256,,}" | sha256sum --check
+          unzip -q frontend.zip -d dist
+          test -f dist/index.html
+          jq -e --arg sha "${COMMIT_SHA,,}" '.sha == $sha' dist/release.json
+
+          mkdir -p evidence
+          jq --arg tag "$RELEASE_TAG" --arg digest "${ARTIFACT_SHA256,,}" \
+            '{tag: $tag, sha: .sha, run: .run, artifact_sha256: $digest}' \
+            dist/release.json > evidence/origem.json
+
+      - name: Registrar a versão atual
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --retry 3 "${FRONTEND_URL%/}/release.json" -o evidence/antes.json
+          jq -e '.sha | type == "string"' evidence/antes.json
+
+      - name: Autenticar na AWS usando OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: rollback-frontend-${{ github.run_id }}
+
+      - name: Republicar os arquivos originais no S3
+        shell: bash
+        run: |
+          aws s3 cp dist/ "s3://$FRONTEND_BUCKET/" --recursive --exclude release.json --cache-control 'no-cache'
+          aws s3 cp dist/release.json "s3://$FRONTEND_BUCKET/release.json" --cache-control 'no-cache'
+
+      - name: Invalidar cache do CloudFront
+        shell: bash
+        run: |
+          invalidation_id=$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths '/*' --query Invalidation.Id --output text)
+          aws cloudfront wait invalidation-completed --distribution-id "$DISTRIBUTION_ID" --id "$invalidation_id"
+
+      - name: Confirmar a versão restaurada pela URL pública
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --retry 3 "${FRONTEND_URL%/}/" -o /dev/null
+          curl --fail --silent --show-error --retry 3 "${FRONTEND_URL%/}/release.json" -o evidence/depois.json
+          jq -e --slurpfile expected dist/release.json \
+            '.sha == $expected[0].sha and .run == $expected[0].run' evidence/depois.json
+
+      - name: Anexar evidências do rollback
+        if: ${{ always() && hashFiles('evidence/*.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-rollback-frontend
+          path: evidence/
+          if-no-files-found: error

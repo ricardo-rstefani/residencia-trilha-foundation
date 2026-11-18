@@ -99,3 +99,8 @@ jobs:
           curl --fail --silent --show-error --retry 3 "${FRONTEND_URL%/}/" -o /dev/null
           curl --fail --silent --show-error --retry 3 "${FRONTEND_URL%/}/release.json" -o published-release.json
           node -e 'const r=JSON.parse(require("fs").readFileSync("published-release.json","utf8")); if(r.sha!==process.env.GITHUB_SHA) throw new Error("Published SHA does not match this run"); console.log("Release verified:",r.sha)'
+
+
+
+
+          

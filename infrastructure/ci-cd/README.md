@@ -34,6 +34,20 @@ Se o subject padrão não usar IDs imutáveis, use `repo:USUARIO/REPOSITORIO:ref
 Uma configuração personalizada (`use_default: false`) exige revisar seus claims;
 não troque a configuração de um repositório compartilhado para contornar o erro.
 
+Neste repositório, o prefixo confirmado pela API do GitHub é
+`repo:ricardo-rstefani@64026470/residencia-trilha-foundation@1452062883`.
+O arquivo `trust-policy.json` usa esse subject com a restrição à main.
+Alterar o JSON no Git não atualiza a role existente na AWS. Para corrigir
+`Not authorized to perform sts:AssumeRoleWithWebIdentity`, aplique a policy
+em uma sessão AWS autenticada com permissão para atualizar a trust da role
+do backend, a partir da raiz do repositório:
+
+```bash
+aws iam update-assume-role-policy --role-name residencia-foundation-backend-deploy --policy-document file://infrastructure/ci-cd/trust-policy.json
+```
+
+Depois, execute novamente o job que falhou no workflow Backend na main.
+
 ## 2. Pipeline do frontend
 
 Workflow oficial: [frontend.yml](../../.github/workflows/frontend.yml).

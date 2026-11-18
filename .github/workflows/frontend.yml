@@ -59,6 +59,7 @@ jobs:
 
   deploy:
     name: Deploy
+    environment: production
     needs: build
     # A execução manual também deve selecionar a main, conforme a trust policy.
     if: github.ref == 'refs/heads/main'

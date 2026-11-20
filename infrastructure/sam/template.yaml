@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Three NEW Lambda functions; existing network, database, roles and integrations remain externally managed.
+
+Parameters:
+  ReleaseId:
+    Type: String
+    AllowedPattern: '[a-f0-9]{40}'
+
+Globals:
+  Function:
+    Architectures: [arm64]
+    MemorySize: 256
+    Timeout: 15
+    AutoPublishAlias: live
+    # Existing resources in account 113011715524, us-east-1.
+    # References only: this stack does not manage the VPC, database or their rules.
+    VpcConfig:
+      SubnetIds:
+        - subnet-04b078caeda99697e
+        - subnet-05f7a2ea700a7a5ab
+      SecurityGroupIds:
+        - sg-0b3f7aa8363430947
+    Environment:
+      Variables:
+        DATA_SOURCE: rds
+        DB_HOST: residencia-foundation-catch-up-marketplace-backend-proxy.proxy-cu5swq46ysli.us-east-1.rds.amazonaws.com
+        DB_PORT: '5432'
+        DB_NAME: marketplace
+        # Existing credentials secret remains required by the application's RDS adapter.
+        # No deploy configuration secret is used; no credentials are stored here.
+        DB_SECRET_ARN: arn:aws:secretsmanager:us-east-1:113011715524:secret:rds!db-e7365b49-65eb-4934-bb7f-735efd2d6923-Xs1M82
+        DB_SSL: 'true'
+        MARKETPLACE_TABLE_NAME: residencia-foundation-catch-up-marketplace-backend-marketplace
+        RELEASE_SHA: !Ref ReleaseId
+
+Resources:
+  CatalogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-catalog'
+      AutoPublishAliasAllProperties: true
+      AutoPublishCodeSha256: !Ref ReleaseId
+      Runtime: nodejs24.x
+      Handler: index.handler
+      CodeUri: ../../release/catalog.zip
+      Role: arn:aws:iam::113011715524:role/residencia-foundation-catch-up--CatalogFunctionRole-XP1W0UWCbRv3
+      Environment:
+        Variables:
+          PRODUCT_IMAGES_BUCKET: residencia-fdn-images-113011715524-us-east-1
+          ALLOWED_ORIGIN: https://d3p2ddbpgyykib.cloudfront.net
+          UPLOAD_URL_TTL_SECONDS: '900'
+          DOWNLOAD_URL_TTL_SECONDS: '3600'
+  OrdersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-orders'
+      AutoPublishAliasAllProperties: true
+      AutoPublishCodeSha256: !Ref ReleaseId
+      Runtime: dotnet8
+      Handler: Residencia.Foundation.Orders::Residencia.Foundation.Orders.Function::FunctionHandler
+      CodeUri: ../../release/orders.zip
+      Role: arn:aws:iam::113011715524:role/residencia-foundation-catch-up-OrderApiFunctionRole-faAVwmHMH25y
+      Environment:
+        Variables:
+          ORDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/113011715524/residencia-foundation-catch-up-marketplace-backend-order-events
+          ALLOWED_ORIGIN: https://d3p2ddbpgyykib.cloudfront.net
+  ProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-processor'
+      AutoPublishAliasAllProperties: true
+      AutoPublishCodeSha256: !Ref ReleaseId
+      Runtime: nodejs24.x
+      Handler: index.handler
+      CodeUri: ../../release/processor.zip
+      Role: arn:aws:iam::113011715524:role/residencia-foundation-cat-OrderProcessorFunctionRol-hb6auS0AIu59
+
+Outputs:
+  CatalogFunctionName:
+    Value: !Ref CatalogFunction
+  OrdersFunctionName:
+    Value: !Ref OrdersFunction
+  ProcessorFunctionName:
+    Value: !Ref ProcessorFunction
+  CatalogAliasArn:
+    Value: !Ref CatalogFunction.Alias
+  OrdersAliasArn:
+    Value: !Ref OrdersFunction.Alias
+  ProcessorAliasArn:
+    Value: !Ref ProcessorFunction.Alias

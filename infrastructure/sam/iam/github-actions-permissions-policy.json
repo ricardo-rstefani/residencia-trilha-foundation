@@ -1,0 +1,129 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadArtifactBucketMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::residencia-catchup-artifacts-113011715524-us-east-1"
+    },
+    {
+      "Sid": "UploadAndReadSamArtifactsOnly",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:AbortMultipartUpload",
+        "s3:ListMultipartUploadParts",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": "arn:aws:s3:::residencia-catchup-artifacts-113011715524-us-east-1/residencia-sam-lab/*"
+    },
+    {
+      "Sid": "CreateOnlyLabChangeSets",
+      "Effect": "Allow",
+      "Action": "cloudformation:CreateChangeSet",
+      "Resource": "arn:aws:cloudformation:us-east-1:113011715524:stack/residencia-sam-lab/*"
+    },
+    {
+      "Sid": "AllowSamTransform",
+      "Effect": "Allow",
+      "Action": "cloudformation:CreateChangeSet",
+      "Resource": "arn:aws:cloudformation:us-east-1:aws:transform/Serverless-2016-10-31"
+    },
+    {
+      "Sid": "ExecuteAndInspectLabChangeSets",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:DescribeChangeSet",
+        "cloudformation:ExecuteChangeSet",
+        "cloudformation:DeleteChangeSet",
+        "cloudformation:DescribeStacks",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:ListStackResources",
+        "cloudformation:GetTemplate"
+      ],
+      "Resource": "arn:aws:cloudformation:us-east-1:113011715524:stack/residencia-sam-lab/*"
+    },
+    {
+      "Sid": "ReadTemplateSummary",
+      "Effect": "Allow",
+      "Action": "cloudformation:GetTemplateSummary",
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageOnlyThreeNewFunctionsAndTheirVersionsAndAliases",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:DeleteFunction",
+        "lambda:PublishVersion",
+        "lambda:ListVersionsByFunction",
+        "lambda:CreateAlias",
+        "lambda:GetAlias",
+        "lambda:UpdateAlias",
+        "lambda:DeleteAlias",
+        "lambda:ListAliases",
+        "lambda:ListTags",
+        "lambda:TagResource",
+        "lambda:UntagResource"
+      ],
+      "Resource": [
+        "arn:aws:lambda:us-east-1:113011715524:function:residencia-sam-lab-catalog",
+        "arn:aws:lambda:us-east-1:113011715524:function:residencia-sam-lab-catalog:*",
+        "arn:aws:lambda:us-east-1:113011715524:function:residencia-sam-lab-orders",
+        "arn:aws:lambda:us-east-1:113011715524:function:residencia-sam-lab-orders:*",
+        "arn:aws:lambda:us-east-1:113011715524:function:residencia-sam-lab-processor",
+        "arn:aws:lambda:us-east-1:113011715524:function:residencia-sam-lab-processor:*"
+      ]
+    },
+    {
+      "Sid": "ReadExistingExecutionRoles",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": [
+        "arn:aws:iam::113011715524:role/residencia-foundation-catch-up--CatalogFunctionRole-XP1W0UWCbRv3",
+        "arn:aws:iam::113011715524:role/residencia-foundation-catch-up-OrderApiFunctionRole-faAVwmHMH25y",
+        "arn:aws:iam::113011715524:role/residencia-foundation-cat-OrderProcessorFunctionRol-hb6auS0AIu59"
+      ]
+    },
+    {
+      "Sid": "PassOnlyExistingExecutionRolesToLambda",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::113011715524:role/residencia-foundation-catch-up--CatalogFunctionRole-XP1W0UWCbRv3",
+        "arn:aws:iam::113011715524:role/residencia-foundation-catch-up-OrderApiFunctionRole-faAVwmHMH25y",
+        "arn:aws:iam::113011715524:role/residencia-foundation-cat-OrderProcessorFunctionRol-hb6auS0AIu59"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "lambda.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "InspectExistingVpcForLambdaConfiguration",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeNetworkInterfaces"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    }
+  ]
+}

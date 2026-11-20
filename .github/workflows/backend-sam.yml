@@ -1,0 +1,83 @@
+name: Backend SAM (novas Lambdas)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-sam-lab
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/lambdas/*/package-lock.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: bash backend/package.sh
+      - name: Validar TypeScript
+        run: |
+          npm --prefix backend/lambdas/01-catalog-backend-api-lambda run check
+          npm --prefix backend/lambdas/03-order-processor-lambda run check
+      - run: node backend/prepare-release.mjs release
+      - uses: aws-actions/setup-sam@v2
+      - run: sam validate --lint --region us-east-1 --template-file infrastructure/sam/template.yaml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sam-packages
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: sam-lab
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      SAM_ARTIFACT_BUCKET: ${{ vars.SAM_ARTIFACT_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: sam-packages
+          path: release
+      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.SAM_AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: sam-${{ github.run_id }}
+      - name: Publicar novas Lambdas via SAM
+        run: python infrastructure/sam/release.py deploy
+      - name: Conferir versoes, aliases e hashes
+        run: python infrastructure/sam/release.py verify
+      - name: Coletar eventos da stack
+        if: always()
+        run: |
+          mkdir -p release/evidence
+          aws cloudformation describe-stack-events --stack-name residencia-sam-lab > release/evidence/events.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sam-evidence-${{ github.run_id }}
+          path: |
+            release/evidence/
+            release/manifest.json
+          retention-days: 30

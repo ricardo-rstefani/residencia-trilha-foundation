@@ -10,6 +10,13 @@ obj/
 .env.local
 .DS_Store
 *.log
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+*.tfbackend
 release/
 .aws-sam/
 aws-cost-audit-2026-11-21/
